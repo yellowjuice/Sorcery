@@ -1,5 +1,6 @@
 #include "card.h"
 #include "enchantment.h"
+#include <iostream>
 #ifndef MINION_H
 #define MINION_H
 
@@ -16,6 +17,9 @@ class Minion : public Card {
     Ability enter;
     Ability exit;
     int index;
+
+  protected:
+    virtual void inspectEnchants(std::ostream &out, std::vector<std::vector<card_template_t>> &v, int mod, bool print = false) const;
     
 
   public:
@@ -43,8 +47,7 @@ class Minion : public Card {
     virtual bool useExit(int p, Location l, int i);
 
     bool die();
-    bool unsummon();
-
+    
     bool request(std::vector<Request> *v, Card *c) override;
     bool notify(Notification n) override; // do not call this
 
@@ -54,7 +57,9 @@ class Minion : public Card {
     void setIndex(int i);
     int getIndex() const;
 
+    card_template_t getAscii() const override;
     
+    void inspect(std::ostream &out) const;
 };
 
 #endif

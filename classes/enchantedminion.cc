@@ -2,8 +2,8 @@
 
 EnchantedMinion::EnchantedMinion(Minion *m, Enchantment *e) :
         Minion(m->getName(), m->getCost(), m->getPlayer(), e->atkModifier(m->getAttack()), 
-               e->defModifier(m->getDefense()), Ability(), Ability(), Ability(),
-               Ability(), Ability()) {
+               e->defModifier(m->getDefense()), Ability(m->getPlayer()), Ability(m->getPlayer()), 
+               Ability(m->getPlayer()), Ability(m->getPlayer()), Ability(m->getPlayer())) {
             setLocation(m->getLocation());
             setIndex(m->getIndex());
             while (m->getActions() > 0 && this->getActions() < m->getActions()) {
@@ -93,4 +93,27 @@ bool EnchantedMinion::useExit(int p, Location l, int i) {
 
 Minion *EnchantedMinion::unenchant() {
     return m;
+}
+
+void EnchantedMinion::inspectEnchants(std::ostream &out, std::vector<std::vector<card_template_t>> &v, int mod, bool print) const {
+    if (mod % 5 == 0) {
+        v.insert(v.begin(), std::vector<card_template_t>());
+        mod = 0;
+    }
+    v[0].insert(v[0].begin(), e->getAscii());
+    inspectEnchants(out, v, mod + 1, false);
+    if (print) {
+        for (std::vector<card_template_t> &x : v) {
+            std::vector<card_template_t::iterator> its;
+            for (card_template_t &y : x) {
+                its.push_back(y.begin());
+            }
+            for ( ; its[0] != x[0].end() ; ) {
+                for (auto &z : its) {
+                    out << *z;
+                }
+                out << std::endl;
+            }
+        }
+    }
 }

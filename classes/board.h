@@ -6,7 +6,7 @@
 #define BOARD_H
 
 class Board : public Observer {
-    Card *cards[5];
+    std::vector<Minion *> minions;
     Ritual *ritual;
     Observer *owner;
     int player;
@@ -17,6 +17,10 @@ class Board : public Observer {
     bool request(std::vector<Request> *r, Card *c) override;
     bool notify(Notification n) override;
 
+    card_template_t ritualAscii() const;
+    friend std::ostream &operator<<(std::ostream &out, const Board &b);
+
+    bool inspect(std::ostream &out, int i) const;
 };
 
 #endif

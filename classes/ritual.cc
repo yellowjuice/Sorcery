@@ -12,7 +12,7 @@ bool Ritual::request(std::vector<Request> *r, Card *c) {
             case Request::Store:
                 c = this;
                 break;
-            case Request::GiveAction:
+            case Request::GetAction:
                 charges += r->at(0).arg;
                 break;
             default:
@@ -24,13 +24,22 @@ bool Ritual::request(std::vector<Request> *r, Card *c) {
 }
 
 bool Ritual::notify(Notification n) {
-    if (n.trigger == trigger) {
-        std::vector<Request> *notifier = passive.get(n.sender_player, 
-                                                     n.sender_location, 
-                                                     n.sender_index);
+    if (n.trigger == trigger && charges >= chargeCost) {
+        std::vector<Request> *notifier = (n.trigger == Notification::Start || n.trigger == Notification::End) ? 
+                                                passive.get(n.arg, 
+                                                            n.sender_location, 
+                                                            n.sender_index) :
+                                                passive.get(n.sender_player, 
+                                                            n.sender_location, 
+                                                            n.sender_index);
         bool retval = requestOwner(notifier, passive.getPtr());
         delete notifier;
+        charges -= chargeCost;
         return retval;
     }
     return true;
+}
+
+card_template_t Ritual::getAscii() const {
+    return display_ritual(getName(), getCost(), chargeCost, passive.getDescription(), charges);
 }

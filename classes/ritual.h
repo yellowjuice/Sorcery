@@ -16,7 +16,7 @@ class Ritual : public Card {
     bool request(std::vector<Request> *r, Card *c) override;
     bool notify(Notification n) override;
     
-    
+    card_template_t getAscii() const override;
 };
 
 #endif
