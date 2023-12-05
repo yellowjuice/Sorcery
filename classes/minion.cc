@@ -2,16 +2,26 @@
 #include "enchantedminion.h"
 
 Minion::Minion(std::string name, int cost, int player, int attack, int defense, 
-               Ability active, Ability start, Ability end, Ability enter, Ability exit) :
+               Ability *active, Ability *start, Ability *end, Ability *enter, Ability *exit,
+               int baseAttack, int baseDefense) :
     Card(Type::MINION, name, cost, player), attack{attack}, defense{defense}, actions{0}, 
-    active{active}, start{start}, end{end}, enter{enter}, exit{exit}, index{-1} { }
+    active{active}, start{start}, end{end}, enter{enter}, exit{exit}, index{-1}, 
+    bAttack{baseAttack}, bDefense{baseDefense} { }
+
+Minion::~Minion() {
+    delete active;
+    delete start;
+    delete end;
+    delete enter;
+    delete exit;
+}
 
 int Minion::getAttack() const { return attack; }
 int Minion::getDefense() const { return defense; }
 int Minion::getActions() const { return actions; }
 
 void Minion::addAction() { ++actions; }
-void Minion::useAction() { --actions; }
+void Minion::useAction() { if (actions > 0) --actions; }
 
 bool Minion::attackPlayer() {
     if (actions <= 0) return false;
@@ -46,37 +56,35 @@ bool Minion::retaliate(Request r) {
     return retval;
 }
 
-bool Minion::isTargetable() const { return active.targetable(); }
+bool Minion::isTargetable() const { return active->targetable(); }
 
 bool Minion::useActive(int p, Location l, int i) {
-    if (actions <= 0) return false;
-    std::vector<Request> *notifier = active.get(p, l, i);
-    bool retval = requestOwner(notifier, active.getPtr());
+    std::vector<Request> *notifier = active->get(p, l, i, getPlayer(), getLocation(), index);
+    bool retval = requestOwner(notifier, active->getPtr(getPlayer()));
     delete notifier;
-    if (retval) --actions;
     return retval;
 }
 bool Minion::useStart(int p) {
-    std::vector<Request> *notifier = start.get(p, Location::NONE, -1);
-    bool retval = requestOwner(notifier, start.getPtr());
+    std::vector<Request> *notifier = start->get(p, Location::NONE, -1, getPlayer(), getLocation(), index);
+    bool retval = requestOwner(notifier, start->getPtr(getPlayer()));
     delete notifier;
     return retval;
 }
 bool Minion::useEnd(int p) {
-    std::vector<Request> *notifier = end.get(p, Location::NONE, -1);
-    bool retval = requestOwner(notifier, end.getPtr());
+    std::vector<Request> *notifier = end->get(p, Location::NONE, -1, getPlayer(), getLocation(), index);
+    bool retval = requestOwner(notifier, end->getPtr(getPlayer()));
     delete notifier;
     return retval;
 }
 bool Minion::useEnter(int p, Location l, int i) {
-    std::vector<Request> *notifier = enter.get(p, l, i);
-    bool retval = requestOwner(notifier, enter.getPtr());
+    std::vector<Request> *notifier = enter->get(p, l, i, getPlayer(), getLocation(), index);
+    bool retval = requestOwner(notifier, enter->getPtr(getPlayer()));
     delete notifier;
     return retval;
 }
 bool Minion::useExit(int p, Location l, int i) {
-    std::vector<Request> *notifier = exit.get(p, l, i);
-    bool retval = requestOwner(notifier, exit.getPtr());
+    std::vector<Request> *notifier = exit->get(p, l, i, getPlayer(), getLocation(), index);
+    bool retval = requestOwner(notifier, exit->getPtr(getPlayer()));
     delete notifier;
     return retval;
 }
@@ -100,16 +108,16 @@ bool Minion::request(std::vector<Request> *v, Card *c) {
            && v->at(0).target_index == index) {
         switch(v->at(0).cmd) {
             case Request::Attack:
-                defense -= v->at(0).arg;
+                loseDef(v->at(0).arg);
                 retaliate(v->at(0));
                 if (defense <= 0) die();
                 break;
             case Request::Retaliate:
-                defense -= v->at(0).arg;
+                loseDef(v->at(0).arg);
                 if (defense <= 0) die();
                 break;
             case Request::Damage:
-                defense -= v->at(0).arg;
+                loseDef(v->at(0).arg);
                 if (defense <= 0) die();
                 break;
             case Request::Fail:
@@ -122,10 +130,11 @@ bool Minion::request(std::vector<Request> *v, Card *c) {
                 c = this;
                 break;
             case Request::Buff:
-                attack += v->at(0).arg;
+                addAtk(v->at(0).arg);
                 break;
             case Request::GetAction:
                 actions += v->at(0).arg;
+                if (actions < 0) actions = 0;
                 break;
             default:
                 break;
@@ -135,24 +144,24 @@ bool Minion::request(std::vector<Request> *v, Card *c) {
     return requestOwner(v, c);
 }
 
-bool Minion::notify(Notification n) {
-    bool retval = false;
+void Minion::notify(Notification n) {
     switch(n.trigger) {
         case Notification::Start:
-            if (getActions() <= 1) addAction();
-            retval = useStart(n.arg);
+            if (getActions() < 1 && n.arg == getPlayer()) addAction();
+            useStart(n.arg);
             break;
         case Notification::End:
-            retval = useEnd(n.arg);
+            useEnd(n.arg);
             break;
         case Notification::Enter:
-            retval = useEnter(n.sender_player, n.sender_location, n.sender_index);
+            useEnter(n.sender_player, n.sender_location, n.sender_index);
             break;
         case Notification::Exit:
-            retval = useExit(n.sender_player, n.sender_location, n.sender_index);
+            useExit(n.sender_player, n.sender_location, n.sender_index);
             break;
+        default:
+            return;
     }
-    return retval;
 }
 
 EnchantedMinion *Minion::enchant(Enchantment *e) {
@@ -170,34 +179,76 @@ void Minion::setIndex(int i) {
 int Minion::getIndex() const { return index; }
 
 card_template_t Minion::getAscii() const {
-    if (!active.isEmpty()) 
+    return getAsciiAlt(attack, defense);
+}
+
+card_template_t Minion::getAsciiAlt(int atk, int def) const {
+    if (!active->isEmpty()) 
         return display_minion_activated_ability(getName(), getCost(), 
-                                                attack, defense, active.getCost(), 
-                                                active.getDescription());
-    if (!start.isEmpty())
+                                                atk, def, activeCost(), 
+                                                active->getDescription());
+    if (!start->isEmpty())
         return display_minion_triggered_ability(getName(), getCost(),
-                                                attack, defense, start.getDescription());
-    if (!end.isEmpty())
+                                                atk, def, start->getDescription());
+    if (!end->isEmpty())
         return display_minion_triggered_ability(getName(), getCost(),
-                                                attack, defense, end.getDescription());
-    if (!enter.isEmpty())
+                                                atk, def, end->getDescription());
+    if (!enter->isEmpty())
         return display_minion_triggered_ability(getName(), getCost(),
-                                                attack, defense, enter.getDescription());
-    if (!exit.isEmpty())
+                                                atk, def, enter->getDescription());
+    if (!exit->isEmpty())
         return display_minion_triggered_ability(getName(), getCost(),
-                                                attack, defense, exit.getDescription());
-    return display_minion_no_ability(getName(), getCost(), attack, defense);
+                                                atk, def, exit->getDescription());
+    return display_minion_no_ability(getName(), getCost(), atk, def);
 }
 
 void Minion::inspectEnchants(std::ostream &out, std::vector<std::vector<card_template_t>> &v, int mod, bool print) const {
 
 }
 
-void Minion::inspect(std::ostream &out) const {
+void Minion::inspectMe(std::ostream &out) const {
     card_template_t o = getAscii();
     for (auto x : o) {
-        std::cout << x << std::endl;
+        out << x << std::endl;
     }
+}
+
+void Minion::inspect(std::ostream &out) const {
+    out << actions << " actions left" << std::endl;
+    inspectMe(out);
     std::vector<std::vector<card_template_t>> temp;
     inspectEnchants(out, temp, 0, true);
 }
+
+bool Minion::hasActive() const {
+    return !active->isEmpty();
+}
+
+int Minion::activeCost() const {
+    return active->getCost();
+}
+
+Minion *Minion::clone() const {
+    Minion *retval = new Minion(getName(), getCost(), getPlayer(), baseAttack(),
+                                baseDefense(), active->clone(), start->clone(), end->clone(),
+                                enter->clone(), exit->clone(), bAttack, bDefense);
+    retval->setOwner(getOwner());
+    retval->setIndex(getIndex());
+    retval->setLocation(getLocation());
+    return retval;
+}
+
+int Minion::baseAttack() const { return bAttack; }
+int Minion::baseDefense() const { return bDefense; }
+
+void Minion::setDefense(int d) { defense = d; }
+void Minion::setAttack(int a) { attack = a; }
+
+void Minion::addAtk(int n) { 
+    attack += n;
+}
+
+void Minion::loseDef(int n) { 
+    defense -= n;
+}
+

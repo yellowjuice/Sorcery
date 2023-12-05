@@ -10,9 +10,11 @@ bool Card::requestOwner(std::vector<Observer::Request> *v, Card *storage) {
     return owner->request(v, storage);
 }
 
-bool Card::notifyOwner(Notification n) {
-    return owner->notify(n);
+void Card::notifyOwner(Notification n) {
+    owner->notify(n);
 }
+
+Observer *Card::getOwner() const { return owner; }
 
 Card::Type Card::getType() const { return type; }
 std::string Card::getName() const { return name; }
@@ -30,3 +32,8 @@ std::ostream &operator<<(std::ostream &out, const Card &c) {
     }
     return out;
 }
+
+std::vector<Card::Request> *Card::Ability::get(int p, Location l, int i, int myP, Location myL, int myI) {
+    return new std::vector<Request>; 
+}
+

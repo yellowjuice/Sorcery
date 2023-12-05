@@ -32,18 +32,44 @@ bool Graveyard::request(std::vector<Request> *requests, Card *c) {
             }
         case Request::Remove: // only have permission to remove top
             if (!minions.empty()) {
+                minions.back()->setDefense(r.arg);
                 minions.pop_back();
             }
             return true;
         case Request::Store: // only have permission to store top
-            c = minions.back();
-            break;
+            if (!minions.empty()){
+                c = minions.back();
+                break;
+            }
+            return false;
         case Request::Success:
             requests->erase(requests->begin());
             request(requests, c);
             return true;
         case Request::Fail:
             return false;
+        case Request::Copy:
+            c = c->clone();
+            break;
+        case Request::Delete:
+            delete c;
+            break;
+        case Request::IfFail:
+            {
+            requests->erase(requests->begin());
+            if (requests->empty()) return true;
+            std::vector<Request> temp;
+            for (int j = 0; j < r.arg && !requests->empty(); ++j) {
+                temp.push_back((*requests)[0]);
+                requests->erase(requests->begin());
+            }
+            bool v = request(requests, c);
+            if (!v) {
+                request(&temp, c);
+                return false;
+            }
+            return true;
+            }
         default:
             return false;
     }
@@ -51,7 +77,7 @@ bool Graveyard::request(std::vector<Request> *requests, Card *c) {
     return request(requests, c);
 }
 
-bool Graveyard::notify(Notification n) { return true; }
+void Graveyard::notify(Notification n) { }
 
 card_template_t Graveyard::getAscii() const {
     if (minions.empty()) return CARD_TEMPLATE_BORDER;

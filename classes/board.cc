@@ -9,12 +9,19 @@ Board::Board(Observer *owner, int player) :
 Board::~Board() {
     delete ritual;
     while (!minions.empty()) {
-        delete minions[0];
+        Minion *m = minions[0];
         minions.erase(minions.begin());
+        Minion *temp = m->unenchant();
+        while (m != temp) {
+            delete m;
+            m = temp;
+            temp = m->unenchant();
+        }
+        delete m;
     }
 }
 
-// POTENTIALLY BUGGY, TEST
+// POTENTIALLY BUGGY, TEST TEST TEST
 bool Board::request(std::vector<Request> *requests, Card *c) {
     if (requests->empty()) return true;
     Request r = (*requests)[0];
@@ -39,7 +46,14 @@ bool Board::request(std::vector<Request> *requests, Card *c) {
                                     && c->getType() == Card::Type::ENCHANTMENT) {
                 c->setLocation(Location::BOARD);
                 c->setOwner(this);
-                minions[r.target_index] = minions[r.target_index]->enchant(dynamic_cast<Enchantment *>(c));
+                Enchantment *d = dynamic_cast<Enchantment *>(c);
+                minions[r.target_index] = minions[r.target_index]->enchant(d);
+                if (!d->getOnPlay()->isEmpty()) {
+                    std::vector<Request> *rs = d->getOnPlay()->get(r.target_player, r.target_location, r.target_index,
+                                                r.target_player, r.target_location, r.target_index);
+                    request(rs, nullptr);
+                    delete rs;
+                }
                 break;
             }
 
@@ -47,6 +61,8 @@ bool Board::request(std::vector<Request> *requests, Card *c) {
             if (c->getType() == Card::Type::RITUAL) {
                 if (ritual != nullptr) delete ritual;
                 ritual = dynamic_cast<Ritual *>(c);
+                ritual->setOwner(this);
+                ritual->setLocation(Location::BOARD);
                 break;
             }
             // playing minions (not: minions are neither arged nor targeted)
@@ -57,6 +73,8 @@ bool Board::request(std::vector<Request> *requests, Card *c) {
                 c->setOwner(this);
                 minions.push_back(dynamic_cast<Minion *>(c));
                 minions[minions.size() - 1]->setIndex(minions.size() - 1);
+                notify(Notification{Notification::Trigger::Enter, player, 
+                                    Location::BOARD, static_cast<int>(minions.size() - 1), -1});
                 break;
             }
         case Request::Remove:
@@ -66,11 +84,16 @@ bool Board::request(std::vector<Request> *requests, Card *c) {
             if (r.target_index == 5 && ritual == nullptr) return false;
             if (r.target_index == 5) {
                 delete ritual;
+                ritual = nullptr;
                 break;
             }
             if (r.target_index >= static_cast<int>(minions.size())) return false;
+            notify(Notification{Notification::Trigger::Exit, player, Location::BOARD, r.target_index, -1});
             minions[r.target_index]->setIndex(-1);
             minions.erase(minions.begin() + r.target_index);
+            for (int i = r.target_index; i < static_cast<int>(minions.size()); ++i) {
+                minions[i]->setIndex(i);
+            }
             break;
         case Request::Unenchant:
             if (r.target_index >= 0 && r.target_index < static_cast<int>(minions.size())) {
@@ -83,7 +106,7 @@ bool Board::request(std::vector<Request> *requests, Card *c) {
         case Request::Play:
             return false;
         case Request::UseAbility:
-            if (r.target_index >= 0 && r.target_index < static_cast<int>(minions.size()) 
+            if (r.target_index >= 0 && r.target_index < static_cast<int>(minions.size()) && minions.at(r.target_index)->hasActive() 
                 && minions[r.target_index]->useActive(r.arg_player, r.arg_location, r.arg_index)) {
                 break;
             }
@@ -105,10 +128,48 @@ bool Board::request(std::vector<Request> *requests, Card *c) {
             return true;
         case Request::Fail:
             return false;
+        case Request::Copy:
+            c = c->clone();
+            break;
+        case Request::Delete:
+            delete c;
+            break;
+        case Request::IfFail:
+            {
+            requests->erase(requests->begin());
+            if (requests->empty()) return true;
+            std::vector<Request> temp;
+            for (int j = 0; j < r.arg && !requests->empty(); ++j) {
+                temp.push_back((*requests)[0]);
+                requests->erase(requests->begin());
+            }
+            bool v = request(requests, c);
+            if (!v) {
+                request(&temp, c);
+                return false;
+            }
+            return true;
+            }
         default:
-            if (r.target_index == 5) {
+            if (r.target_index == 6) {
+                std::vector<Minion *> temp;
+                for (Minion *x : minions) {
+                    temp.push_back(x);
+                }
+                for (Minion *x : temp) {
+                    Request temp2 = Request((*requests)[0]);
+                    temp2.target_index = x->getIndex();
+                    std::vector<Request> tV;
+                    tV.push_back(temp2);
+                    x->request(&tV, nullptr);
+                }
+                requests->erase(requests->begin());
+                return request(requests, c);
+            }
+            if (r.target_index == 5 && ritual != nullptr) {
                 return ritual->request(requests, c);
             }
+            if (r.target_index == 5) return false;
             if (r.target_index >= static_cast<int>(minions.size())) return false;
             if (r.target_index < 0) return false;
             return minions[r.target_index]->request(requests, c);
@@ -118,19 +179,17 @@ bool Board::request(std::vector<Request> *requests, Card *c) {
 }
 
 // POTENTIALLY BUGGY, TEST
-bool Board::notify(Notification n) {
+void Board::notify(Notification n) {
     
-    bool retval = true;
     for (auto x : minions) {
-        retval = x->notify(n) && retval;
+        x->notify(n);
     }
     if (ritual != nullptr) {
-        retval = ritual->notify(n) && retval;
+        ritual->notify(n);
     }
     if (n.sender_player == player) {
-        retval = owner->notify(n) && retval;
+        owner->notify(n);
     }
-    return retval;
 }
 
 card_template_t Board::ritualAscii() const {
@@ -163,9 +222,17 @@ std::ostream &operator<<(std::ostream &out, const Board &b) {
 }
 
 bool Board::inspect(std::ostream &out, int i) const {
-    if (minions.size() < i) {
+    if (i < static_cast<int>(minions.size())) {
         minions.at(i)->inspect(out);
         return true;
     }
     return false;
+}
+
+int Board::numMinions() const {
+    return static_cast<int>(minions.size());
+}
+
+int Board::useCost(int i) const {
+    return minions.at(i)->activeCost();
 }

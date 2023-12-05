@@ -15,7 +15,7 @@ class Graveyard : public Observer {
     Minion *getTop();
 
     bool request(std::vector<Request> *requests, Card *c) override;
-    bool notify(Notification n);
+    void notify(Notification n) override;
     card_template_t getAscii() const;
 
 };

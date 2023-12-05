@@ -1,0 +1,12 @@
+play 1
+play 1
+play 1
+end
+play 2
+play 3
+end
+attack 1
+attack 1 1 // minion 1 able to attack twice
+attack 1 1 // new minion 1 does not take damage
+
+// FIXED - Minions gain turn for each start notif, not just the one they are starting on

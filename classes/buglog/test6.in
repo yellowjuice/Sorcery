@@ -1,0 +1,17 @@
+// playing a card and then a card with an active ability will cause the card with
+// an active ability not to be able to use the ability on the same turn regardless of magic
+end
+end
+end
+end
+end
+end
+end
+end
+end
+end
+play 5
+end
+play 5
+play 1
+use 2

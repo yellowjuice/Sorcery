@@ -1,0 +1,6 @@
+// seg fault when ending turn after playing ritual
+// play ritual
+play 1
+// play another minion
+play 2
+end // segfault

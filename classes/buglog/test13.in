@@ -1,0 +1,5 @@
+// inspect not working on enchanted minions
+play 3
+play 1 1 1
+inspect 1
+// FIXED - issue with implementation in inspect enchanted minion function

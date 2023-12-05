@@ -3,6 +3,7 @@
 #define AIRELEMENTAL_H
 
 class AirElemental : public Minion {
+
   public:
     AirElemental(int player);
 };

@@ -13,9 +13,11 @@ class Hand : public Observer {
 
     int numCards() const;
     bool request(std::vector<Request> *requests, Card *c) override;
-    bool notify(Notification n) override;
+    void notify(Notification n) override;
 
     friend std::ostream &operator<<(std::ostream &out, const Hand &h);
+
+    int playCost(int i) const;
 };
 
 #endif

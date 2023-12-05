@@ -81,6 +81,28 @@ bool Hand::request(std::vector<Request> *requests, Card *c) {
             if (r.target_index >= static_cast<int>(cards.size())) return false;
             c = cards[r.target_index];
             break;
+        case Request::Copy:
+            c = c->clone();
+            break;
+        case Request::Delete:
+            delete c;
+            break;
+        case Request::IfFail:
+            {
+            requests->erase(requests->begin());
+            if (requests->empty()) return true;
+            std::vector<Request> temp;
+            for (int j = 0; j < r.arg && !requests->empty(); ++j) {
+                temp.push_back((*requests)[0]);
+                requests->erase(requests->begin());
+            }
+            bool v = request(requests, c);
+            if (!v) {
+                request(&temp, c);
+                return false;
+            }
+            return true;
+            }
         default:
             return false;
     }
@@ -88,9 +110,7 @@ bool Hand::request(std::vector<Request> *requests, Card *c) {
     return request(requests, c);
 }
 
-bool Hand::notify(Notification n) {
-    return true;
-}
+void Hand::notify(Notification n) { }
 
 std::ostream &operator<<(std::ostream &out, const Hand &h) {
     int num = h.numCards();
@@ -111,4 +131,8 @@ std::ostream &operator<<(std::ostream &out, const Hand &h) {
         out << std::endl;
     }
     return out;
+}
+
+int Hand::playCost(int i) const {
+    return cards.at(i)->getCost();
 }

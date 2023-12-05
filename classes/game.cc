@@ -1,7 +1,9 @@
 #include "game.h"
 
-Game::Game(std::string name1, std::string name2) :
-    p1{new Player(this, 1, name1)}, p2{new Player(this, 2, name2)}, turn{1} { }
+Game::Game(std::string name1, std::string name2, std::istream &deck1, std::istream &deck2, bool testing) :
+    p1{new Player(this, 1, name1, deck1, testing)}, 
+    p2{new Player(this, 2, name2, deck2, testing)}, 
+    turn{1} { }
 
 Game::~Game() {
     delete p1;
@@ -127,10 +129,9 @@ bool Game::request(std::vector<Request> *requests, Card *c) {
     return false; // might change later to account for losing
 }
 
-bool Game::notify(Notification n) {
+void Game::notify(Notification n) {
     if (n.sender_player == 1) p2->notify(n);
     else if (n.sender_player == 2) p1->notify(n);
-    return false;
 }
 
 std::ostream &operator<<(std::ostream &out, const Game &g) {
@@ -155,3 +156,38 @@ bool Game::inspect(std::ostream &out, int i) const {
 }
 
 int Game::getTurn() const { return turn; }
+
+int Game::numBoardCards() const {
+    if (turn == 1) return p1->numBoardCards();
+    return p2->numBoardCards();
+}
+
+int Game::numHandCards() const {
+    if (turn == 1) return p1->numHandCards();
+    return p2->numHandCards();
+}
+
+int Game::playCost(int i) const {
+    if (turn == 1) return p1->playCost(i);
+    return p2->playCost(i);
+}
+
+int Game::useCost(int i) const {
+    if (turn == 1) return p1->useCost(i);
+    return p2->useCost(i);
+}
+
+int Game::getMagic() const {
+    if (turn == 1) return p1->getMagic();
+    return p2->getMagic();
+}
+
+void Game::useMagic(int i) {
+    if (turn == 1) p1->useMagic(i);
+    else p2->useMagic(i);
+}
+
+int Game::getLife(int p) const {
+    if (p == 1) return p1->getLife();
+    return p2->getLife();
+}

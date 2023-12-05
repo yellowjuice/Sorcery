@@ -1,0 +1,6 @@
+typeset -i x=0
+
+for t in ./*.cc ./*.h */*.cc */*.h; do
+    x=${x}+$(wc -l < $t)
+done
+echo ${x}

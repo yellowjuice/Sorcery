@@ -1,9 +1,13 @@
 #include "ritual.h"
 
 Ritual::Ritual(std::string name, int cost, int player, int charges, 
-                int chargeCost, Notification::Trigger trigger, Ability passive) :
+                int chargeCost, Notification::Trigger trigger, Ability *passive) :
     Card(Card::Type::RITUAL, name, cost, player), charges{charges}, 
     chargeCost{chargeCost}, trigger{trigger}, passive{passive} { }
+
+Ritual::~Ritual() {
+    delete passive;
+}
 
 bool Ritual::request(std::vector<Request> *r, Card *c) {
     while (!r->empty() && r->at(0).target_player == getPlayer()
@@ -23,23 +27,34 @@ bool Ritual::request(std::vector<Request> *r, Card *c) {
     return requestOwner(r, c);
 }
 
-bool Ritual::notify(Notification n) {
+void Ritual::notify(Notification n) {
     if (n.trigger == trigger && charges >= chargeCost) {
         std::vector<Request> *notifier = (n.trigger == Notification::Start || n.trigger == Notification::End) ? 
-                                                passive.get(n.arg, 
+                                                passive->get(n.arg, 
                                                             n.sender_location, 
-                                                            n.sender_index) :
-                                                passive.get(n.sender_player, 
+                                                            n.sender_index,
+                                                            getPlayer(), getLocation(),
+                                                            5) :
+                                                passive->get(n.sender_player, 
                                                             n.sender_location, 
-                                                            n.sender_index);
-        bool retval = requestOwner(notifier, passive.getPtr());
-        delete notifier;
-        charges -= chargeCost;
-        return retval;
+                                                            n.sender_index,
+                                                            getPlayer(), getLocation(),
+                                                            5);
+        if (!notifier->empty()) {
+            requestOwner(notifier, passive->getPtr(getPlayer()));
+            delete notifier;
+            charges -= chargeCost;
+        }
     }
-    return true;
 }
 
 card_template_t Ritual::getAscii() const {
-    return display_ritual(getName(), getCost(), chargeCost, passive.getDescription(), charges);
+    return display_ritual(getName(), getCost(), chargeCost, passive->getDescription(), charges);
+}
+
+Ritual *Ritual::clone() const {
+    Ritual *retval = new Ritual(getName(), getCost(), getPlayer(), charges, chargeCost, trigger, passive->clone());
+    retval->setLocation(getLocation());
+    retval->setOwner(getOwner());
+    return retval;
 }

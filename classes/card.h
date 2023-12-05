@@ -21,28 +21,31 @@ class Card : public Observer {
   protected:
     class Ability {
         bool isTargetable;
-        Card *defStorage;
-        int player;
         bool empty;
         std::string description;
         int cost;
       public:
-        Ability(bool t, Card *d, int p, const std::string &desc, int cost) : isTargetable{t}, defStorage{d}, 
-                                                                   player{p}, empty{false}, 
-                                                                   description{desc}, cost{cost} { }
-        Ability(int p) : isTargetable{false}, defStorage{nullptr}, player{p}, 
-                         empty{true}, description{""}, cost{0} { }
+        Ability(bool t, const std::string &desc, int cost) : 
+            isTargetable{t}, empty{false}, 
+            description{desc}, cost{cost} { }
+        Ability(const std::string &desc) :
+            isTargetable{false}, empty{true}, description{desc}, cost{0} { }
+        Ability() : isTargetable{false}, empty{true}, 
+                         description{""}, cost{0} { }
+        virtual ~Ability() = default;
 
-        virtual std::vector<Request> *get(int p, Location l, int i) {
-            return new std::vector<Request>; 
-        } // generates a request
+        virtual std::vector<Request> *get(int p, Location l, int i, int myP, Location myL, int myI); // generates a request
 
         bool targetable() const { return isTargetable; }
-        Card *getPtr() const { return defStorage; }
-        void setPtr(Card *d) { defStorage = d; }
+        virtual Card *getPtr(int p) const { return nullptr; }
         bool isEmpty() const { return empty; }
         std::string getDescription() const { return description; }
         int getCost() const { return cost; }
+
+        virtual Ability *clone() {
+            if (empty) return new Ability();
+            return new Ability(isTargetable, description, cost);
+        }
     };
 
   public:
@@ -50,7 +53,7 @@ class Card : public Observer {
     Card(Type type, std::string name, int cost, int player);
 
     bool requestOwner(std::vector<Request> *v, Card *storage = nullptr);
-    bool notifyOwner(Notification n);
+    void notifyOwner(Notification n);
 
     // getters/setters
     Type getType() const;
@@ -63,6 +66,8 @@ class Card : public Observer {
     // do not use this to print more complicated structures
     friend std::ostream &operator<<(std::ostream &out, const Card &c); 
     
+    virtual Card *clone() const = 0;
+    Observer *getOwner() const;
 };
 
 #endif

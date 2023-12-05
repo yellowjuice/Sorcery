@@ -1,0 +1,5 @@
+// segfault when ending turn after playing multiple enchants on one minion
+play 3
+play 1 1 1
+play 1 1 1
+end

@@ -21,16 +21,28 @@ class Player : public Observer {
 
   public:
     Player(Observer *owner, int player, std::string name);
+    Player(Observer *owner, int player, std::string name, std::istream &in, bool testing);
     ~Player() override;
 
     bool request(std::vector<Request> *requests, Card *c) override;
-    bool notify(Notification n);
+    void notify(Notification n) override;
 
     friend std::ostream &operator<<(std::ostream &out, const Player &p);
 
     void printHand(std::ostream &out) const;
 
     bool inspect(std::ostream &out, int i) const;
+
+    int numBoardCards() const;
+    int numHandCards() const;
+
+    int playCost(int i) const;
+    int useCost(int i) const;
+
+    int getMagic() const;
+    void useMagic(int i);
+
+    int getLife() const;
 };
 
 #endif

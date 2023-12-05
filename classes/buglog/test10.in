@@ -1,0 +1,17 @@
+// banishing rituals creates segfault when printing
+
+play 2
+end
+board
+hand
+play 1 1 1
+board
+hand
+play 3
+board
+hand
+end
+board
+play 1 2 r
+// segfault occurs here
+board

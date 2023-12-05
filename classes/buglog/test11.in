@@ -1,0 +1,3 @@
+play 1
+// segfault when playing recharge with no ritual (FIXED)
+// segfault when playing raise dead with empty graveyard

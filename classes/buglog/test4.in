@@ -1,0 +1,4 @@
+// player 1 magic goes -ve when playing a card with 0 cost
+play 1
+play 2
+// FIXED - indexing problem

@@ -9,12 +9,13 @@ class Deck : public Observer {
 
   public:
     Deck(Observer *owner, int player);
+    Deck(Observer *owner, int player, std::istream &in, bool testing);
     ~Deck();
 
     void shuffle();
 
     bool request(std::vector<Request> *requests, Card *c);
-    bool notify(Notification n);
+    void notify(Notification n);
 
     bool draw();
 };

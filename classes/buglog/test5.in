@@ -1,0 +1,8 @@
+// with novice pyromancer
+
+play 1
+end
+play 3
+end
+use 1 2 1 // success
+use 1 2 1 // fail, should not fail

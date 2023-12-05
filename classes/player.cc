@@ -8,6 +8,14 @@ Player::Player(Observer *owner, int p, std::string name) :
         }
     }
 
+Player::Player(Observer *owner, int p, std::string name, std::istream &in, bool testing) :
+    owner{owner}, player{p}, board{new Board(this, p)}, hand{new Hand(this, p)}, 
+    deck{new Deck(this, p, in, testing)}, graveyard{new Graveyard(this, p)}, magic{3}, life{20}, name{name} {
+        for (int i = 0; i < 5; ++i) {
+            deck->draw();
+        }
+    }
+
 Player::~Player() {
     delete board;
     delete deck;
@@ -37,33 +45,69 @@ bool Player::request(std::vector<Request> *requests, Card *c) {
                     life -= r.arg;
                     break;
                     // later check if life < 0
+                case Request::GetAction:
+                    magic += r.arg;
+                    break;
                 case Request::Success:
                     requests->erase(requests->begin());
                     request(requests, c);
                     return true;
                 case Request::Fail:
                     return false;
-                default:
-                    return false;
-            }
+                case Request::Copy:
+                    c = c->clone();
+                    break;
+                case Request::Delete:
+                    delete c;
+                    break;
+                case Request::IfFail:
+                    {
+                    requests->erase(requests->begin());
+                    if (requests->empty()) return true;
+                    std::vector<Request> temp;
+                    for (int j = 0; j < r.arg && !requests->empty(); ++j) {
+                        temp.push_back((*requests)[0]);
+                        requests->erase(requests->begin());
+                    }
+                    bool v = request(requests, c);
+                    if (!v) {
+                        request(&temp, c);
+                        return false;
+                    }
+                    return true;
+                    }
+                        default:
+                            return false;
+                    }
             requests->erase(requests->begin());
             return request(requests, c);
         }
     }
 }
 
-bool Player::notify(Notification n) {
-    if (n.trigger == Notification::Start) {
+void Player::notify(Notification n) {
+    if (n.trigger == Notification::Start && n.arg == player) {
         ++magic;
     }
     if (n.trigger == Notification::Start || n.trigger == Notification::End) {
-        return deck->notify(n) && board->notify(n) && hand->notify(n) && graveyard->notify(n);
+        deck->notify(n);
+        board->notify(n);
+        hand->notify(n);
+        graveyard->notify(n);
+        return;
     }
     if (n.sender_player == player && n.sender_location != Location::NONE 
                                   && n.sender_location != Location::PLAYER) {
-        return owner->notify(n);
+        owner->notify(n);
+        return;
     }
-    return deck->notify(n) && board->notify(n) && hand->notify(n) && graveyard->notify(n); // may be unsafe
+    if (n.sender_player != player && n.sender_location != Location::NONE) {
+        deck->notify(n);
+        board->notify(n);
+        hand->notify(n);
+        graveyard->notify(n);
+    }
+
 }
 
 void Player::print(std::ostream &out) const {
@@ -116,4 +160,33 @@ void Player::printHand(std::ostream &out) const {
 
 bool Player::inspect(std::ostream &out, int i) const {
     return board->inspect(out, i);
+}
+
+int Player::numBoardCards() const {
+    return board->numMinions();
+}
+
+int Player::numHandCards() const {
+    return hand->numCards();
+}
+
+int Player::useCost(int i) const {
+    return board->useCost(i);
+}
+
+int Player::playCost(int i) const {
+    return hand->playCost(i);
+}
+
+int Player::getMagic() const {
+    return magic;
+}
+
+void Player::useMagic(int i) {
+    magic -= i;
+    if (magic < 0) magic = 0;
+}
+
+int Player::getLife() const {
+    return life;
 }

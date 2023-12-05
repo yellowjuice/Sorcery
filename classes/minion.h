@@ -11,26 +11,32 @@ class Minion : public Card {
     int defense;
     int actions;
     
-    Ability active;
-    Ability start;
-    Ability end;
-    Ability enter;
-    Ability exit;
+    Ability *active;
+    Ability *start;
+    Ability *end;
+    Ability *enter;
+    Ability *exit;
     int index;
-
-  protected:
-    virtual void inspectEnchants(std::ostream &out, std::vector<std::vector<card_template_t>> &v, int mod, bool print = false) const;
+    int bAttack;
+    int bDefense;
     
-
   public:
     
     Minion();
     Minion(std::string name, int cost, int player, int attack, int defense, 
-           Ability active, Ability start, Ability end, Ability enter, Ability exit);
+           Ability *active, Ability *start, Ability *end, Ability *enter, Ability *exit,
+           int baseAttack, int baseDefense);
+    ~Minion() override;
     
     int getAttack() const;
     int getDefense() const;
     int getActions() const;
+
+    virtual void addAtk(int n);
+    virtual void loseDef(int n);
+
+    void setDefense(int d);
+    void setAttack(int a);
 
     void addAction();
     void useAction();
@@ -46,10 +52,13 @@ class Minion : public Card {
     virtual bool useEnter(int p, Location l, int i);
     virtual bool useExit(int p, Location l, int i);
 
+    virtual bool hasActive() const;
+    virtual int activeCost() const;
+
     bool die();
     
     bool request(std::vector<Request> *v, Card *c) override;
-    bool notify(Notification n) override; // do not call this
+    void notify(Notification n) override;
 
     EnchantedMinion *enchant(Enchantment *e);
     virtual Minion *unenchant();
@@ -58,8 +67,16 @@ class Minion : public Card {
     int getIndex() const;
 
     card_template_t getAscii() const override;
+    virtual card_template_t getAsciiAlt(int atk, int def) const;
     
+    virtual void inspectEnchants(std::ostream &out, std::vector<std::vector<card_template_t>> &v, int mod, bool print = false) const;
+    virtual void inspectMe(std::ostream &out) const;
     void inspect(std::ostream &out) const;
+
+    virtual Minion *clone() const override;
+
+    int baseAttack() const;
+    int baseDefense() const;
 };
 
 #endif

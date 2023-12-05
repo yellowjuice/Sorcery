@@ -1,0 +1,31 @@
+// ritual starts with one less charge than it should
+play 4
+end
+play 4
+end
+end
+end
+end
+end
+end
+end
+end
+end
+end
+end
+end
+end
+play 3
+play 3
+end
+play 2
+end
+use 1
+board
+
+// FIXED - changed notify to void return type (some && bs)
+
+// bug 2: unexpected behaviour where aura of power does not give the correct buff to the third
+//        minion spawned by master summoner
+// FIXED - something to do with clone and typecasting where the second minion spawned has type Card
+//         so the third minion uses card->clone which starts with a 0/0 minion

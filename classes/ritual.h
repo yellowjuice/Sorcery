@@ -7,16 +7,20 @@ class Ritual : public Card {
     int charges;
     int chargeCost;
     Notification::Trigger trigger;
-    Ability passive;
+    Ability *passive;
     
   public:
     Ritual(std::string name, int cost, int player, int charges, 
-            int chargeCost, Notification::Trigger trigger, Ability passive);
+            int chargeCost, Notification::Trigger trigger, Ability *passive);
+    
+    ~Ritual();
     
     bool request(std::vector<Request> *r, Card *c) override;
-    bool notify(Notification n) override;
+    void notify(Notification n) override;
     
     card_template_t getAscii() const override;
+
+    Ritual *clone() const override;
 };
 
 #endif
